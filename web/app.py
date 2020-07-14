@@ -78,12 +78,7 @@ class Register(Resource):
         })
 
 # classify post
-class Classify(Resource):
-    def post(self):
-        postedData = request.get_json()
-        username = postedData['username']
-        password = postedData['password']
-        url = postedData['url']
+
 
 class Refill(Resource):
     def post(self):
@@ -93,12 +88,22 @@ class Refill(Resource):
         refill_amount = postedData['refill_amount']
 
         # if the user doesn't exist reutn 301 and exit
+        if not userExists(username):
+            return jsonify(generateReturnDictionary(301,'user doesn\'t exist'))
 
         # if the password is incorrect return 302 and exit
+        if not verifyCredentials(username,admin_pw):
+            return jsonify(302,'incorrect password')
+        # if we make it here then we refill
+        users.update({
+            "username":username
+        },{
+            "$set":{
+                "tokens":refill_amount
+            }
+        })
 
-        # if we make it here then do the comparison
-
-class Classif(Resource):
+class Classify(Resource):
     def post(self):
         postedData = request.get_json()
         username = postedData['username']
