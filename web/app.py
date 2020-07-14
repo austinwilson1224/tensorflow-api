@@ -29,11 +29,30 @@ def userExists(username):
 
 # verify if the encrypted password is correct 
 def verifyPw(username,password):
-    hashed_pw = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
-    stored_pw = users.find({
+    # first make sure the user exists
+    if not userExists(username):
+        return False
+    
+    hashed_pw = users.find({
         "username":username
     })[0]['passowrd']
-    return hashed_pw == stored_pw
+    return hashed_pw == bcrypt.hashpw(password.encode('utf8'),hashed_pw)
+
+
+def verifyCredentials(username,password):
+    if not userExists(username):
+        return generateReturnDictionary(301,'invalid username'), False
+
+    correct_pw = verifyPw(username,password)
+    if not correct_pw:
+        return generateReturnDictionary(302,"invalid password"), True
+
+    return None, False
+def generateReturnDictionary(status,message):
+    return {
+        "status":status,
+        "message":message
+    }
 
 # registration post 
 class Register(Resource):
@@ -47,7 +66,7 @@ class Register(Resource):
                 "message": "username already in use"
             })
 
-        hashed_pw = bcrypt.hashpw(password.encode('utf-8'),bcrypt.gensalt())
+        hashed_pw = bcrypt.hashpw(password.encode('utf8'),bcrypt.gensalt())
         users.insert({
             "username":username,
             "password":hashed_pw,
@@ -79,6 +98,42 @@ class Refill(Resource):
 
         # if we make it here then do the comparison
 
+class Classif(Resource):
+    def post(self):
+        postedData = request.get_json()
+        username = postedData['username']
+        password = postedData['password']
+        url = postedData['url']
+
+        retJson, error = verifyCredentials(username,password)
+
+        if error:
+            return jsonify(retJson)
+
+        # check to see if they have enough tokens to use the API  
+        tokens = users.find({'username':username})[0]['tokens']
+        if tokens <= 0:
+            # TODO 
+            return jsonify(generateReturnDictionary(3030,'not enough tokens!'))
+    
+        r = requests.get(url)
+        retJson = {}
+        with open("temp.jpg","wb") as f:
+            f.write(r.content)
+            proc = subprocess.Popen("python classify_image.py --model_dir=. --image_file=./temp.jpg")
+            proc.communicate()[0]
+            proc.wait()
+            with open("text.txt") as g:
+                retJson = json.load(g)
+
+        users.update({
+            "username":username
+        },{
+            "$set":{
+                "tokens":tokens - 1
+            }
+        })
+        return retJson
 
 
 
