@@ -35,7 +35,7 @@ def verifyPw(username,password):
     
     hashed_pw = users.find({
         "username":username
-    })[0]['passowrd']
+    })[0]['password']
     return hashed_pw == bcrypt.hashpw(password.encode('utf8'),hashed_pw)
 
 
