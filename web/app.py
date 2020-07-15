@@ -125,11 +125,11 @@ class Classify(Resource):
         retJson = {}
         with open("temp.jpg","wb") as f:
             f.write(r.content)
-            proc = subprocess.Popen("python classify_image.py --model_dir=. --image_file=./temp.jpg")
+            proc = subprocess.Popen("python classify_image.py --model_dir=. --image_file=./temp.jpg", stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
             proc.communicate()[0]
             proc.wait()
-            with open("text.txt") as g:
-                retJson = json.load(g)
+            with open("text.txt") as f:
+                retJson = json.load(f)
 
         users.update({
             "username":username
